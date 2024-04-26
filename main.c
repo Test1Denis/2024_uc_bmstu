@@ -45,6 +45,8 @@ SOFTWARE.
 **===========================================================================
 */
 
+extern int adc_data_for_dma[1024];
+
 void init_blink() {
 	gpioC_init();
 }
@@ -83,6 +85,18 @@ void ADC1_COMP_IRQHandler() {
 	else if ((ADC1->ISR & ADC_ISR_EOSEQ) == ADC_ISR_EOS) {
 		ADC1->ISR |= ADC_ISR_EOS;
 	}
+}
+
+void DMA1_Channel1_IRQHandler(void) {
+	if ((DMA1->ISR & DMA_ISR_TCIF1) == DMA_ISR_HTIF1) {
+		DMA1->IFCR |= DMA_IFCR_CHTIF1;
+	}
+
+	if ((DMA1->ISR & DMA_ISR_TCIF1) == DMA_ISR_TCIF1) {
+		DMA1->IFCR |= DMA_IFCR_CTCIF1;
+		GPIOC->ODR ^= GPIO_ODR_8;
+	}
+
 }
 
 void CheckDrebezg() {
@@ -134,10 +148,10 @@ void ReadADC_ch2() {
 }
 
 void SetPwm_1() {
-	TIM3->CCR3 = adc_data1;
+	TIM3->CCR3 = adc_data_for_dma[0];
 }
 void SetPwm_2() {
-	TIM3->CCR4 = adc_data2;
+	TIM3->CCR4 = adc_data_for_dma[1];
 }
 
 int main(void)
@@ -149,14 +163,12 @@ int main(void)
 	tim3_init_as_pwm();
 //	tim6_init();
 //	tim6_start();
-	init_ADC();
+	init_ADC_with_dma();
+
 
 	while (1)
 	{
-		ReadADC_ch1();
-		SetPwm_1();
-		ReadADC_ch2();
-		SetPwm_2();
+
 	}
 }
 

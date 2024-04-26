@@ -12,6 +12,7 @@
 
 
 void init_ADC();
+void init_ADC_with_dma();
 
 
 #endif /* ADC_H_ */
