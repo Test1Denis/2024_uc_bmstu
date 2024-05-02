@@ -32,6 +32,8 @@ SOFTWARE.
 #include "gpio.h"
 #include "tim.h"
 #include "adc.h"
+#include "usart.h"
+#include "ds18b20.h"
 /* Private macro */
 /* Private variables */
 /* Private function prototypes */
@@ -98,6 +100,14 @@ void DMA1_Channel1_IRQHandler(void) {
 	}
 
 }
+uint8_t data = 0;
+void USART1_IRQHandler() {
+	if ((USART1->ISR & USART_ISR_TXE) == USART_ISR_TXE) {
+		USART1->TDR = data;
+		++data;
+	}
+
+}
 
 void CheckDrebezg() {
 	if (count_press_button > 0) {
@@ -110,7 +120,7 @@ void CheckDrebezg() {
 }
 
 void Set48MHz() {
-	SystemCoreClock;
+//	SystemCoreClock; <-- здесь хранится текущая тактовая частота, после вызова функции SytemCoreClockUpdate()
 	RCC->CR &= ~RCC_CR_PLLON;
 	while((RCC->CR & RCC_CR_PLLRDY) == RCC_CR_PLLRDY);
 
@@ -121,7 +131,6 @@ void Set48MHz() {
 
 	RCC->CFGR |= RCC_CFGR_SW_1;
 	while((RCC->CFGR & RCC_CFGR_SWS_1) != RCC_CFGR_SWS_1);
-
 
 	SystemCoreClockUpdate();
 }
@@ -159,16 +168,50 @@ int main(void)
 //	Set48MHz();
 //	gpioA_init();
 //	gpioB_init();
-	gpioC_init_for_pwm();
-	tim3_init_as_pwm();
+//	gpioC_init_for_pwm();
+//	tim3_init_as_pwm();
 //	tim6_init();
 //	tim6_start();
-	init_ADC_with_dma();
+//	init_ADC_with_dma();
+//	usart1_init();
+//	ds18b20_Init(GPIOC, 13, DS18B20_RES_12);
 
+	usart1_dma_init();
+	while(1) {
 
+	}
+
+	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+	GPIOC->MODER |= GPIO_MODER_MODER13_0;
+
+	volatile float a = 10321421;
+//	int a = 0;
 	while (1)
 	{
+		GPIOC->BSRR = GPIO_BSRR_BS_13;
+		for (int i = 0; i < 1000; i++) {
+			a += 3;
+			a += 3;
+			a += 3;
+			a += 3;
+			a += 3;
+			a += 3;
+			a += 3;
+			a += 3;
+			a += 3;
+			a += 3;
+		}
+		GPIOC->BSRR = GPIO_BSRR_BR_13;
+		for (int i = 0; i < 100; i++);
 
+//		ds18b20_StartMeas();
+//		for (int i = 0; i < 1000; i++) {
+//			Delay_tick(3400);
+//		}
+////		while(!ds18b20_isConversion());
+//
+//		temperature = ds18b20_GetTemperature();
+//		real_temp = (temperature & 0xFFF) * 0.0625;
 	}
 }
 
