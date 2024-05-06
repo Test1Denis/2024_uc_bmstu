@@ -101,13 +101,6 @@ void DMA1_Channel1_IRQHandler(void) {
 
 }
 uint8_t data = 0;
-void USART1_IRQHandler() {
-	if ((USART1->ISR & USART_ISR_TXE) == USART_ISR_TXE) {
-		USART1->TDR = data;
-		++data;
-	}
-
-}
 
 void CheckDrebezg() {
 	if (count_press_button > 0) {
@@ -163,6 +156,92 @@ void SetPwm_2() {
 	TIM3->CCR4 = adc_data_for_dma[1];
 }
 
+void error(char* data) {
+	//what do you want from me???
+	//I don't know this cmd...
+}
+void ChangeFreqPwm(char* data) {
+	//data[0] <- code cmd
+	//data[1] <- num channel PWM
+	//data[2] <- freq pwm
+	//data[3] <- turn on/OFF
+}
+void ChangeSPWM(char* data) {}
+void SetFreqBlinkLed(char* data) {}
+void TurnOnOffLED(char* data) {}
+void ChooseADC_Channel(char* data) {
+//	data[0] <- code of cmd
+//data[1] <-- num_channel
+//data[2] | data[3] <-- SMPS
+//data[3] <-- turn on/ turn off
+}
+
+void (*cmd_func[16])(char* data) = {	error, 				//0x00
+										ChangeFreqPwm, 		//0x01
+										ChangeSPWM, 		//0x02
+										SetFreqBlinkLed, 	//0x03
+										TurnOnOffLED, 		//0x04
+										error,				//0x05
+										error,				//0x06
+										error,				//0x07
+										error,				//0x08
+										ChooseADC_Channel,	//0x09
+										error,				//0x0A
+										error,				//0x0B
+										error,				//0x0C
+										error,				//0x0D
+										error,				//0x0E
+										error				//0x0F
+									};
+
+uint8_t GetXor(uint8_t *data) {
+	uint8_t res_xor = data[0];
+	for (int i = 1; i < 7; i++) {
+		res_xor ^= data[i];
+	}
+	return 0;
+
+}
+
+
+void ProcessUsart1Data() {
+	uint8_t data;
+	if (usart1_GetDataFromRing(&data) == -1) {
+		return;
+	}
+	static uint8_t status = 0;
+	static uint8_t cmd[8 - 1];	//size cmd is 8 byte, 1st byte is sync, don't process
+	static uint8_t cur_byte = 0;
+
+	switch(status) {
+		case 0 :	//wait sync byte
+			if (data == 0x69) {
+				status++;
+			}
+		break;
+		case 1 :	//get data bytes
+			cmd[cur_byte++] = data;
+			if (cur_byte > 5) {
+				status++;
+			}
+		break;
+		case 2 :	//get xor byte
+		{
+			cmd[cur_byte] = data;
+			status = 0;
+			cur_byte = 0;
+			if (!GetXor(cmd)) {
+				//ok
+				cmd_func[cmd[0]](&cmd[0]);
+				break;
+			}
+			//nok
+		}
+		break;
+	}
+	return;
+}
+
 int main(void)
 {
 //	Set48MHz();
@@ -173,12 +252,14 @@ int main(void)
 //	tim6_init();
 //	tim6_start();
 //	init_ADC_with_dma();
-//	usart1_init();
+	usart1_init();
 //	ds18b20_Init(GPIOC, 13, DS18B20_RES_12);
-
-	usart1_dma_init();
+//	usart1_dma_init();
 	while(1) {
-
+		ProcessUsart1Data();
+		Task1();
+		Task2();
+		Task3();
 	}
 
 	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;

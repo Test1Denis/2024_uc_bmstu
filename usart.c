@@ -6,6 +6,29 @@
  */
 #include "usart.h"
 
+static struct RingBuffer rx_buffer;
+static char rx_data[RX_DATA_SIZE];
+
+static void rx_buffer_init() {
+	ring_init(&rx_buffer, RX_DATA_SIZE, &rx_data[0]);
+}
+
+uint8_t usart1_GetDataFromRing(uint8_t *el) {
+	return ring_GetFromFront(&rx_buffer, el);
+}
+
+void USART1_IRQHandler() {
+	if ((USART1->ISR & USART_ISR_TXE) == USART_ISR_TXE) {
+
+	}
+	if ((USART1->ISR & USART_ISR_RXNE) == USART_ISR_RXNE) {
+		char data = USART1->RDR;
+		if (ring_PutToEnd(&rx_buffer, data) == -1) {
+			//I can't accept your data .... fu... you....
+		}
+	}
+}
+
 static gpio_for_usart_init() {
 	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
 	GPIOA->MODER |= GPIO_MODER_MODER9_1;	//TX
@@ -15,11 +38,12 @@ static gpio_for_usart_init() {
 }
 
 void usart1_init() {
+	rx_buffer_init();
 	gpio_for_usart_init();
 
 	RCC->APB2ENR |= RCC_APB2ENR_USART1EN;
-	USART1->CR1 |= USART_CR1_TXEIE;
-//	USART1->CR1 |= USART_CR1_RXNEIE;
+//	USART1->CR1 |= USART_CR1_TXEIE;
+	USART1->CR1 |= USART_CR1_RXNEIE;
 	USART1->CR1 |= USART_CR1_TE | USART_CR1_RE;	//
 	USART1->BRR = SystemCoreClock / 115200;
 
